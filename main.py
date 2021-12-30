@@ -177,6 +177,29 @@ def findrecords(table, args):
             #print("[INFO] PostgreSQL connection closed")
     return ret
 
+
+
+def doctorsload():
+    try:
+        connection = psycopg2.connect(
+            host=host,
+            user=user,
+            password=password,
+            database=db_name
+        )
+        with connection.cursor() as cursor:
+            #cursor.execute("select * from pg_tables where schemaname='public';")
+            cursor.execute(f"SELECT name, public.\"Doctor\".hosp_name, phone, position, COUNT(patient_name) as a FROM public.\"Doctor\", public.\"Doctors prescription for Patient\" WHERE name=doc_name GROUP BY name, public.\"Doctor\".hosp_name, phone, position ORDER BY public.\"Doctor\".hosp_name ASC, a DESC;")
+            ret = cursor.fetchall()
+    except Exception as _ex:
+        #print("[INFO] Error while working with PostgreSQL", _ex)
+        pass
+    finally:
+        if connection:
+            connection.close()
+            #print("[INFO] PostgreSQL connection closed")
+    return ret
+
 def open_window(atr, vals, find):
     if find == False:
         tmp = ""
@@ -203,18 +226,28 @@ def open_window(atr, vals, find):
             return window_1['inp'].get()
 
 
+
+
+
     window.close()
 layoutTable = [
-    [ sg.Listbox(values=requesttables(), select_mode = True, right_click_menu=['&Right', ['Показать все записи']], enable_events=True, size=(80, 40), key="-TABLE MENU-"), sg.Text("Вы просматриваете все таблицы.\nЧтобы просмотреть записи\nконкретной таблицы:\n1. Выделите её (ЛКМ)\n2. Вызовите меню действий (ПКМ)\n\n Для взаимодействия с записями\n так же используйте меню,\n вызываемое ПКМ,\n предварительно выбрав нужную.")]
+    [ sg.Listbox(values=requesttables(), select_mode = True, right_click_menu=['&Right', ['Показать все записи']], enable_events=True, size=(80, 40), key="-TABLE MENU-"), sg.Text("Вы просматриваете все таблицы.\nЧтобы просмотреть записи\nконкретной таблицы:\n1. Выделите её (ЛКМ)\n2. Вызовите меню действий (ПКМ)\n\n Для взаимодействия с записями\n так же используйте меню,\n вызываемое ПКМ,\n предварительно выбрав нужную.")],
+    [sg.Button("Посмотреть загруженность докторов", size=(23, 2))]
 ]
 
 layoutRecords = [
     [sg.Text("", key="attrs")],[sg.Listbox(values=[], select_mode = True, right_click_menu=['&Right', ['Удалить запись', 'Добавить запись', 'Обновить запись', 'Найти запись по ключу(-ам)']], enable_events=True, size=(80, 40), key="-RECORDS LIST-"), sg.Button('Вернуться к таблицам', size=(23, 1))]
 ]
 
-layout = [[sg.Column(layoutTable, key='-COL1-',  visible=True), sg.Column(layoutRecords, key='-COL2-',  visible=False)]]
+workload = [
+    [sg.Text("Имя доктора/Название больницы(↑)/Номер телефона/Должность/Кол-во пациентов(↓)")],[sg.Listbox(values=doctorsload(), select_mode = True, enable_events=True, size=(80, 40), key="-LOAD LIST-"), sg.Button('Вернуться к таблицам', size=(23, 1))]
+]
 
-window = sg.Window('v1.0', layout, size=(840, 650))
+layout = [[sg.Column(layoutTable, key='-COL1-',  visible=True), sg.Column(layoutRecords, key='-COL2-',  visible=False), sg.Column(workload, key='-COL3-',  visible=False)]]
+
+
+
+window = sg.Window('v1.0', layout, size=(840, 750))
 layout = 1
 while True:
     event, values = window.read()
@@ -228,6 +261,11 @@ while True:
                 window[f'-COL2-'].update(visible=True)
                 window['attrs'].update(value=getattributes(window['-TABLE MENU-'].get()[0][0]))
                 window.Element('-RECORDS LIST-').Update(values=requestrecords(window['-TABLE MENU-'].get()[0][0]))
+        if event == "Посмотреть загруженность докторов":
+            window[f'-COL{layout}-'].update(visible=False)
+            layout = 3
+            window[f'-COL3-'].update(visible=True)
+            window.Element('-LOAD LIST-').Update(values=doctorsload())
     if layout == 2:
         if event == "Вернуться к таблицам":
             window[f'-COL{layout}-'].update(visible=False)
@@ -256,3 +294,9 @@ while True:
             tmp = open_window(getattributes(window['-TABLE MENU-'].get()[0][0]), getattributes(window['-TABLE MENU-'].get()[0][0]), True)
             if tmp != None:
                 window.Element('-RECORDS LIST-').Update(values=findrecords(window['-TABLE MENU-'].get()[0][0], tmp))
+    if layout == 3:
+        if event == "Вернуться к таблицам0":
+                window[f'-COL{layout}-'].update(visible=False)
+                layout = 1
+                window[f'-COL1-'].update(visible=True)
+                window.Element('-TABLE MENU-').Update(values=requesttables())
