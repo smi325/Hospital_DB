@@ -214,7 +214,7 @@ layoutRecords = [
 
 layout = [[sg.Column(layoutTable, key='-COL1-',  visible=True), sg.Column(layoutRecords, key='-COL2-',  visible=False)]]
 
-window = sg.Window('БДСМ (не Сергея Михайловича, а Сладкова Михаила) v1.0', layout, size=(840, 650))
+window = sg.Window('v1.0', layout, size=(840, 650))
 layout = 1
 while True:
     event, values = window.read()
